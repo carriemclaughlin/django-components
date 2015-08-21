@@ -1,0 +1,7 @@
+<h2>Add new attendee</h2>
+
+<form method="POST" action="{{ this_form_url }}">
+    {% csrf_token %}
+    {{ attendance_form.as_p }}
+    <input type="submit">
+</form>

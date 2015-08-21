@@ -1,0 +1,30 @@
+
+{% load load_component from components %}
+
+<h2>Attendees</h2>
+
+<ul>
+    {% for attendee in attendance_list %}
+        <li>
+            <div>
+                <div style="float: left;">
+                    {{ attendee.name }}
+                    - {{ attendee.arrival_time }}
+                </div>
+                <div style="float: left;">
+                    {% comment %}
+                        We're using a variable instead of hardcoding the
+                        component_name/key so that we can more easily
+                        extend the listing component in later examples.
+
+                        Also, ignore_missing is added so that if we end up
+                        not adding the component due to the viewing user
+                        not being staff, we won't get a warning locally.
+                    {% endcomment %}
+                    {% load_component deletion_component_name attendee_id=attendee.id ignore_missing=1 %}
+                </div>
+                <br style="clear: both;">
+            </div>
+        </li>
+    {% endfor %}
+</ul>

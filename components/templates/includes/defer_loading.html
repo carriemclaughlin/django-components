@@ -1,0 +1,21 @@
+
+<div class="cmp-deferred"
+    data-cmp_url="{{ component_info.url }}?{{ get_params }}"
+    data-cmp_page_key="{% firstof component_info.page_key override_page_key '' %}"
+    data-cmp_component_key="{{ component_info.component_key }}"
+    {% if component_info.param_key %}data-cmp_param_key="{{ component_info.param_key }}"{% endif %}>
+
+    <div class="js hide-on-error"></div>
+
+    {% if not search_bot %}
+        <div class="no-js">
+            <p>
+                <strong>This section requires Javascript.</strong><br>
+                You are seeing this because something didn't load right. We suggest you, (a) try
+                refreshing the page, (b) enabling javascript if it is disabled on your browser and,
+                finally, (c) <a href="{{ component_info.page_url }}?no_js=true">loading the
+                non-javascript version of this page</a>. We're sorry about the hassle.
+            </p>
+        </div>
+    {% endif %}
+</div>

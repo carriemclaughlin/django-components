@@ -1,0 +1,26 @@
+
+<h2>Add new attendee</h2>
+
+<p>(Currently {{ num_attendees }} attending)</p>
+
+<form method="POST" action="{{ this_form_url }}">
+    {% csrf_token %}
+    {% if message_type == 'marked_attendance_successfully' %}
+    <div style="color: green;" id="saved_div">
+        {# Note: we could also use {{ message_text }} here if we set it #}
+        Saved!
+    </div>
+    <script type="text/javascript">
+        var oldonload = window.onload || function () {};
+        window.onload = function () {
+            $('#saved_div').fadeOut(3000);
+            oldonload.call(window);
+        };
+        (function () {
+            $('#saved_div').fadeOut(3000);
+        })();
+    </script>
+    {% endif %}
+    {{ attendance_form.as_p }}
+    <input type="submit">
+</form>

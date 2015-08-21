@@ -1,0 +1,27 @@
+
+{# the template tag for adding child components is in `components` #}
+{% load load_component from components %}
+
+<h2>Attendees</h2>
+
+<ul>
+    {% for attendee in attendance_list %}
+        <li>
+            <div>
+                <div style="float: left;">
+                    {{ attendee.name }}
+                    - {{ attendee.arrival_time }}
+                </div>
+                <div style="float: left;">
+                    {% comment %}
+                        the `load_component` template tag takes 1
+                        positional argument: `component_key`/name and
+                        optional kwargs which correspond to the url kwargs.
+                    {% endcomment %}
+                    {% load_component 'step_7_deleting' attendee_id=attendee.id %}
+                </div>
+                <br style="clear: both;">
+            </div>
+        </li>
+    {% endfor %}
+</ul>

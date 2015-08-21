@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block content %}
+    {% comment %}
+        The surrounding div id follows a specific formula so it can be
+        automatically updated on ajax requests: `cmp_<component_name>_id`
+    {% endcomment %}
+    <div class="cmp" id="cmp_step_1_attendance_entry_id">
+        {% comment %}
+            Similarly, you can grab the rendered html from the component by
+            asking for `component_name` from the dictionary of rendered html
+            `components`:
+        {% endcomment %}
+        {{ components.step_1_attendance_entry }}
+    </div>
+{% endblock content %}

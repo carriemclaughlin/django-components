@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block content %}
+    {% comment %}
+        Adding a secondary component into a page works the same way
+        as a primary component from a html perspective:
+    {% endcomment %}
+    <div class="cmp" id="cmp_step_2_listing_id">
+        {{ components.step_2_listing }}
+    </div>
+
+    {% comment %}
+        Note that order doesn't matter and components is just a dict.
+        If you wanted to you could include another template that used
+        the components rather than using them in the page.html file.
+    {% endcomment %}
+    <div class="cmp" id="cmp_step_2_attendance_entry_id">
+        {{ components.step_2_attendance_entry }}
+    </div>
+{% endblock content %}

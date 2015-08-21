@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>{% block head_title %}Attendance Example{% endblock %}</title>
+        {% block extra_head %}
+        {% endblock %}
+        <style>
+            div.cmp {
+                border: 2px solid grey;
+            }
+            body.no-js .cmp-deferred .js { display: none; }
+            body.no-js .cmp-deferred .no-js {
+                display: none;
+                float: left;
+                clear: left;
+                width: 100%;
+            }
+
+            body.js .cmp-deferred .js { display: block; }
+            body.js .cmp-deferred .spinner {
+                margin: 20px;
+            }
+            body.js .cmp-deferred .no-js { display: none; }
+
+            .no_js_hider {
+                display: none;
+            }
+            .spinner {
+                display: inline-block;
+                width: 16px;
+                height: 16px;
+                background: url(http://i.imgur.com/QDy2kNq.gif) 0 0 no-repeat;
+            }
+
+        </style>
+        <script src="//code.jquery.com/jquery-1.7.2.min.js"></script>
+        <script type="text/javascript">
+            var show_component_debug = function(){
+                $("div.debug_component_info").show();
+            };
+
+        </script>
+        <script type="text/javascript">
+            var disable_ajax_form_handling = function(){
+                $('form').each(function(){
+                    $(this).off("submit");
+                });
+            };
+        </script>
+
+        <script type="text/javascript">
+            /* NOTE: This should be a static file in production. */
+            (function (){
+                /**
+                * Checks if element is visible within the viewport or in
+                * relation to the $container element
+                *
+                * @param {jQuery} $container is the dom element that
+                * contains the component we are checking if it is null
+                * window will be used instead.
+                * @return {Boolean}
+                */
+                $.fn.is_in_pane = function ($container) {
+
+                    // We need to calculate the top or base offset incase we are in a modal
+                    // which is in front of a page that has been scrolled
+                    $container = $container || null;
+                    var topOffset = 0;
+                    if($container !== null && $container[0]) {
+                        topOffset = $container.offset().top;
+                    } else {
+                        $container = $(window);
+                    }
+
+                    var $el = $(this[0]); // grab first element
+                    if($el.length === 0) {
+                        return false;
+                    }
+
+                    var top = $container.scrollTop(),
+                        bottom = top + $container.height(),
+                        etop = $el.offset().top - topOffset,
+                        ebottom = etop + $el.outerHeight();
+
+                    // top of element is above viewport bottom and
+                    // bottom of element is below top of viewport.
+                    // returns true even if element is only partially visible
+                    return etop > 0 && etop <= bottom && ebottom >= top;
+                };
+
+                window.vkey = window.vkey || {};
+
+                // default handler
+                // to use in your callbacks:
+                //     var x = vkey.handle(action, action_key) -- x is jq object for component
+                window.vkey.handle = function(action, action_key) {
+                    var cmp = $('#cmp_' + action_key + '_id');
+                    if(cmp.length === 0) {
+                        cmp = $('.cmp_' + action_key + '_id');
+                    }
+
+                    cmp.html(action.new_html);
+                    autosubmit.init(cmp);
+
+                    // // Load all the deferred components inside this component if there are any
+                    cmp.find('.cmp-deferred').each(function () {
+                        deferred.add($(this));
+                    });
+                    return cmp;
+                };
+
+                var ajax = function (key) {
+                    if(this instanceof ajax) {
+                        this.key = key || false;
+                        return this;
+                    } else {
+                        return new ajax(key);
+                    }
+                };
+
+                ajax.prototype = {
+                    post: function (url, data) {
+                        return this.send(url, data, 'POST');
+                    },
+                    get: function (url, data) {
+                        return this.send(url, data, 'GET');
+                    },
+                    form: function (selector, data) {
+                        selector = selector || '';
+                        data = data || {};
+                        var formdata = {},
+                            form = $(selector);
+
+                        // if there's no form returned from the query...
+                        if(form.length === 0) {
+                            // there's no form to send
+                            return this;
+                        }
+
+                        // if there's a url in the data obj, use that. otherwise, use the form's action
+                        formdata.url = typeof data.url === 'string' ? data.url : form.attr('action');
+                        formdata.url = formdata.url || '';
+                        formdata.url = formdata.url.length === 0 ? window.location.href : formdata.url;
+
+                        // loop through all inputs
+                        form.find('input:not([type=radio], [type=checkbox]),input[type=checkbox]:checked,input[type=radio]:checked,input[type=checkbox]:selected,select,textarea').each(function (index, value) {
+                            var input = this,
+                                key = input.name || '';
+
+                            if(key.length > 0) {
+
+                                // if duplicate keys, convert to or push to an array
+                                if(key.indexOf('[]') > -1 && formdata[key]) {
+
+                                    // if this key is already an array
+                                    if(formdata[key] instanceof Array) {
+                                        formdata[key].push(input.value);
+
+                                    // else start an array of values
+                                    } else {
+                                        formdata[key] = [formdata[key], input.value];
+                                    }
+
+                                // else just store the value like normal
+                                } else {
+                                    formdata[key] = input.value;
+                                }
+                            }
+                        });
+
+                        // combine the formdata with override data
+                        data = $.extend(true, {}, formdata, data, form.data());
+
+                        // disable the buttons
+                        form.find('button,input[type=submit]')
+                            .prop('disabled', 'disabled')
+                            .addClass('dim');
+
+                        // send it
+                        return this.send(data.url, data, 'POST');
+                    },
+                    send: function (url, data, type) {
+                        // multiple this' (thises? this's?) are too confusing, 'context' refers to ajax class
+                        var context = this;
+
+                        // init...
+                        url = url || '';
+                        data = data || {};
+                        type = type || 'POST';
+                        data.page_key = data.page_key || this.key;
+                        data.deferred = data.deferred || false;
+                        data.timeout = data.timeout || 90000;
+
+                        $.ajax({
+                            url: url,
+                            data: data,
+                            type: type,
+                            timeout: data.timeout,
+                            cache: false,
+                            success: function (result) {
+                                // if there's a redirect, do that before bothering with this other stuff
+                                if (typeof result.redirect === "string") {
+                                    window.location = result.redirect;
+                                }
+
+                                // loop through all actions
+                                $.each(result.actions || {}, function (action_key, action) {
+                                    // action.result no longer exists in the response
+                                    if(action.result && action.result.reload) {
+                                        ajax(data.page_key).get(action.result.reload, {
+                                            param_key: action_key
+                                        });
+                                    } else {
+                                        context.success(action_key, action, data.deferred);
+                                    }
+                                });
+                            },
+                            error: function (response) {
+                                context.error(response, data);
+                            }
+                        });
+
+                        return this;
+                    },
+                    error: function (response, data) {
+                        $('.hide-on-error').hide();
+                        response.status = response.status || 0;
+
+                        // process data
+                        data.page_key = this.key;
+                        delete data.csrfmiddlewaretoken;
+                        delete data.deferred;
+
+                        if(response.statusText === 'timeout') {
+                            alert('timeout');
+                        } else if(response.status > 0) {
+                            alert('server communication error');
+                        }
+                    },
+                    success: function (action_key, action, deferred) {
+                        var callback = window.vkey[action.component_key] || window.vkey.handle;
+                        callback(action, action_key, deferred || false);
+                    }
+                };
+
+                // auto submit most forms
+                // To disable auto submit:
+                //   1. add 'disable-auto-submit' class to form
+                //   2. use autosubmit.disable($('.my-form'))
+                // --------------------------------------------------
+                var autosubmit = {
+                    // autosubmit.init() -- searches <body> for forms and adds auto_submit event
+                    // autosubmit.init($('.my-div')) -- searches <div class="my-div"> for forms and adds auto_submit event
+                    init: function (elem) {
+                        elem = elem || $('body');
+                        var disabled = 'form:not(.disable-auto-submit)';
+                        elem.find('form').each( function () {
+                            var $this = $(this);
+                            if($this.is(disabled)) {
+                                $this.off('submit.auto_submit');
+                                $this.on('submit.auto_submit', function (e) {
+                                    e.preventDefault();
+                                    autosubmit.process.apply(this, arguments);
+                                });
+                                if($this.not('.disable_submit_auto_disabling')) {
+                                    $this.submit_auto_disable();
+                                }
+                            }
+                        });
+                    },
+                    process: function (e) {
+                        var $form = $($(this).get(0)),
+                            page_key = $form.find('input#id_page_key').val();
+                        e.preventDefault();
+                        ajax(page_key).form($form);
+                    },
+                    disable: function (obj) {
+                        obj.off('submit.auto_submit');
+                    }
+                };
+                ajax.autosubmit = autosubmit;
+
+                // auto disable forms, prevent submitting more than once
+                $.fn.submit_auto_disable = function () {
+                    return $(this).each( function () {
+                        var submit_events = [],
+                            submit_bindings = [];
+
+                        if($._data($(this).get(0)).events) {
+                            submit_bindings = $._data($(this).get(0)).events.submit || [];
+                            submit_bindings = submit_bindings.slice(0);
+                        }
+
+                        if($(this)[0].onsubmit) {
+                            submit_events.push($(this)[0].onsubmit);
+                        }
+
+                        $.each(submit_bindings, function (index, value) {
+                            submit_events.push(value.handler);
+                        });
+
+                        $(this)[0].onsubmit = function () {};
+                        $(this).off('submit');
+                        $(this).on('submit', function (e) {
+                            var fail = false,
+                                default_prevented = false;
+
+                            var index;
+                            for(index in submit_events) {
+                                try {
+                                    this.next_handler = submit_events[index];
+                                    if(this.next_handler(e) === false) {
+                                        fail = true;
+                                    }
+                                } catch(err) {}
+                            }
+                            if(e.isDefaultPrevented) {
+                                if(e.isDefaultPrevented()) {
+                                    default_prevented = true;
+                                }
+                            }
+
+                            if(!fail && !default_prevented) {
+                                $(this).off('submit');
+                                $(this).on('submit', function(e) {
+                                    e.preventDefault();
+                                });
+                            }
+                            return !fail;
+                        });
+                    });
+                };
+
+
+                // deferred components
+                // --------------------------------------------------
+
+                var deferred = {
+                    cmps: [],
+                    count: 0,
+                    listening: false,
+                    show_overridden: false,
+
+                    // regex to catch userAgents that must load
+                    // deferred components onLoad or onDomReady
+                    should_autoshow: /opera mini|series40/i
+                };
+                ajax.deferred = deferred;
+
+                // add: determines how to load the component
+                deferred.add = function ($cmp) {
+                    if(this.should_autoshow.test(navigator.userAgent)) {
+                        deferred.load($cmp);
+                        return;
+                    }
+                    if($cmp.is(':visible')) {
+                        // if it's showing on the page somewhere
+                        if($cmp.is_in_pane()) {
+                            // if it's in the frame, load it
+                            deferred.load($cmp);
+                        } else {
+                            // else, it's visible but somewhere out of view, check on it when scrolling
+                            deferred.cmps.push($cmp);
+                            deferred.count ++;
+                            if(!deferred.listening) {
+                                deferred.listen();
+                            }
+                        }
+                    } else {
+                        // else, it's really hidden, hijack the show function
+                        deferred.check_for_unhide();
+                    }
+                };
+
+                // listen: check for non-loaded components and load them as they come into view
+                deferred.listen = function () {
+                    this.listening = true;
+                    $(window).on('scroll.deferred', _.throttle(function (e) {
+                        var i = 0,
+                            l = deferred.cmps.length,
+                            $cmp = false;
+                        for(i; i<l; i++) {
+                            $cmp = deferred.cmps[i];
+                            if($cmp !== false && $cmp.is_in_pane()) {
+                                deferred.load($cmp);
+                                deferred.cmps[i] = false;
+                                deferred.count --;
+                                if(deferred.count === 0) {
+                                    deferred.listening = false;
+                                    $(window).off('scroll.deferred');
+                                }
+                            }
+                        }
+                    }, 16));
+                };
+
+                // check_for_unhide: load the component when it is shown
+                deferred.check_for_unhide = function ($cmp) {
+                    if(!this.show_overridden) {
+                        this.show_overridden = true;
+
+                        var old_show = $.fn.show;
+                        $.fn.show = function(speed, callback) {
+                            return $(this).each(function() {
+                                var $this = $(this);
+                                old_show.apply($this, [speed, callback]);
+
+                                $this.find('.cmp-deferred').each(function () {
+                                    var $cmp = $(this);
+                                    if($cmp.is(':visible')) {
+                                        deferred.load($cmp);
+                                    }
+                                });
+                            });
+                        };
+                    }
+                };
+
+                // load: load the component
+                deferred.load = function ($cmp) {
+                    var data = $cmp.data();
+                    $cmp.find('.js').addClass('spinner');
+                    ajax(data.cmp_page_key).get(data.cmp_url, {
+                        param_key: data.cmp_param_key,
+                        deferred: true
+                    });
+                };
+
+
+                // Onload
+
+                $(function () {
+
+                    // Auto Submit Setup
+                    // automatically submit_auto_disable this to all forms (unless specificied)
+                    $('form:not(.disable_submit_auto_disabling)').submit_auto_disable();
+
+                    $('form').each(function () {
+                        if($(this).attr('action') === '') {
+                            $(this).attr('action', window.location.href);
+                        }
+                    });
+                    autosubmit.init();
+
+                    // Deferred Component Setup
+                    $('.cmp-deferred').each(function () {
+                        deferred.add($(this));
+                    });
+                });
+            })();
+
+        </script>
+
+    </head>
+    <body class="no-js">
+        {% block body %}
+            {% if messages %}
+                {% spaceless %}
+                <div>
+                    <strong>Messages:</strong>
+                    <ul>
+                        {% for message in messages %}
+                            <li>{{message}}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% endspaceless %}
+            {% endif %}
+
+            <div>
+                <strong>Menu:</strong>
+                <ul>
+                    <li>
+                        <a onclick="show_component_debug();return false;"
+                                href="javascript:void();">
+                            Show component debug info
+                        </a>
+                    </li>
+                    <li>
+                        <a onclick="disable_ajax_form_handling();return false;"
+                                href="javascript:void();">
+                            Disable automatic ajax form handling</a>
+                        (Next action will do a full page POST (ajax will reenable automatically))
+                    </li>
+                    <li>
+                        Time since full page reload/redirect/etc
+                        <span id="countup_timer">0</span> Seconds
+                    </li>
+                </ul>
+            </div>
+            {% block content %}
+            {% endblock content %}
+        {% endblock body %}
+        {% block extra_body %}
+        {% endblock extra_body %}
+    </body>
+    <script type="text/javascript">
+        setInterval(function(){
+            var $timer = $("#countup_timer");
+            $timer.html(parseInt($timer.html()) + 1);
+        }, 1000)
+    </script>
+    <script type="text/javascript">
+    (function(){
+        $('body').removeClass('no-js').addClass('js');
+    })();
+    </script>
+</html>

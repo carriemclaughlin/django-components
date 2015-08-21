@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+
+{% block content %}
+    {% if has_component.step_7_listing %}
+        <div class="cmp" id="cmp_step_7_listing_id">
+            {{ components.step_7_listing }}
+        </div>
+    {% endif %}
+
+    <div class="cmp" id="cmp_step_10_attendance_entry_id">
+        {{ components.step_10_attendance_entry }}
+    </div>
+{% endblock content %}

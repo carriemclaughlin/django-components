@@ -1,0 +1,11 @@
+
+<h2>Attendees</h2>
+
+<ul>
+    {% for attendance_record in attendance_list %}
+        <li>
+            {{ attendance_record.name }}
+            - {{ attendance_record.arrival_time }}
+        </li>
+    {% endfor %}
+</ul>
