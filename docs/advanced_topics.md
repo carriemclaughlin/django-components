@@ -28,6 +28,6 @@ doing it:
 
 ##### Back to [Component Framework Tutorial](tutorial/00_intro.md)
 
-For more info, check out the [Component Framework overview doc](overview.md)
+For more info, check out the [Component Framework overview doc](README.md)
 and possibly more informatively, the doc-strings and comments in the
 [base/views.py](../components/views.py) file itself.

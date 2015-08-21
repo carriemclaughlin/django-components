@@ -5,7 +5,7 @@ Django-Components
 Django-Components is a Django app that allows constructing responses with
 reusable components that bundle view and template logic together.
 
-[Detailed documentation is in the "docs" directory.](docs/overview.md)
+[Detailed documentation is in the "docs" directory.](docs/README.md)
 
 Quick start
 -----------

@@ -8,7 +8,7 @@ set up the example, you can access the pages at the `/<example number>/`
 endpoints.
 
 Once you've worked your way through the tutorial, the
-[Component Framework overview doc](../overview.md) may help clear up further
+[Component Framework overview doc](../README.md) may help clear up further
 questions and possibly may serve as an easier reference.
 
 ## Examples:
