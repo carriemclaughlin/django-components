@@ -13,6 +13,7 @@ Tutorial](tutorial/00_intro.md)**
   * [Mixins](#mixins-standard-python-mixins)
   * [What happens to `request`](#what-happens-to-request-componentsviews)
 * [Using Components in the Front-end](#using-components-in-the-front-end)
+  * [versioning](#component-versioning-system)
   * [HTML](#html)
   * [JavaScript](#javascript)
   * [Debugging](#debugging)
@@ -156,6 +157,28 @@ Pages.
   * request_info.passive is available to check
 
 ## Using Components in the Front-end
+
+### Component Versioning System 
+It's important to consider that components can load newer versions of a view than the surrounding page has loaded when there is a deployment and the page hasn't been refreshed. Therefore any javascript or css that the component relies upon might not be loaded and references will fail. 
+
+Fortunately, there is the component versioning system to handle this situation. By incrementing the version number in versions.py (all components default to version 1) we can warn the user that there might be an error, and either ask them to refresh, or refresh the page ourselves in order to load fresh javascript and css. The exact behavior is determined by py_failure_mode and js_failure_mode. 
+
+#### How it works:
+
+1. all of the component_keys are loaded into window.VERSIONS in every page load (see includes/footer.html) This is a lot of data on every page request. They all have a value of 1.
+2. When there is an ajax request, the component checks versions.py for the component version number. If py_failure_mode is hard the component returns nothing, otherwise it renders the view and returns the version as part of the request.
+3. If an ajax request returns a version that is off by 1, then the js_failure_mode is checked and we either
+    - warn the user and load the update anyway (why?)
+    - warn the user and don’t load the update and tell the user to refresh
+    - warn the user and refresh the page after 5 seconds
+    - don’t warn the user and don’t do anything (why?)
+4. If an ajax request returns a version that is off by more than 1, it warns the user and refreshes the page after 5 seconds
+
+#### How to test it:
+
+1. Load a page that as a component
+2. Change the version number in versions.py
+3. Submit a form that refreshes a component
 
 ### HTML
 Typical usage
